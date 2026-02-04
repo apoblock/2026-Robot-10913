@@ -14,10 +14,10 @@ import edu.wpi.first.math.geometry.Pose3d;
 import edu.wpi.first.math.geometry.Rotation2d;
 import edu.wpi.first.math.geometry.Translation2d;
 import edu.wpi.first.wpilibj.DriverStation;
-import edu.wpi.first.wpilibj.GenericHID;
 import edu.wpi.first.wpilibj.XboxController;
 import edu.wpi.first.wpilibj.simulation.DriverStationSim;
 import edu.wpi.first.wpilibj2.command.Command;
+import edu.wpi.first.wpilibj2.command.CommandScheduler;
 import edu.wpi.first.wpilibj2.command.Commands;
 import edu.wpi.first.wpilibj2.command.button.CommandXboxController;
 import edu.wpi.first.wpilibj2.command.sysid.SysIdRoutine;
@@ -30,6 +30,10 @@ import frc.robot.subsystems.drive.GyroIOSim;
 import frc.robot.subsystems.drive.ModuleIO;
 import frc.robot.subsystems.drive.ModuleIOSim;
 import frc.robot.subsystems.drive.ModuleIOSpark;
+import frc.robot.subsystems.intake.Intake;
+import frc.robot.subsystems.intake.IntakeIO;
+import frc.robot.subsystems.intake.IntakeIOSim;
+import frc.robot.util.ControllerUtils;
 import org.ironmaple.simulation.SimulatedArena;
 import org.ironmaple.simulation.drivesims.SwerveDriveSimulation;
 import org.ironmaple.simulation.seasonspecific.rebuilt2026.Arena2026Rebuilt;
@@ -45,6 +49,7 @@ import org.littletonrobotics.junction.networktables.LoggedDashboardChooser;
 public class RobotContainer {
   // Subsystems
   private final Drive drive;
+  private final Intake intake;
   private SwerveDriveSimulation driveSimulation = null;
 
   // Controller
@@ -60,6 +65,8 @@ public class RobotContainer {
 
   /** The container for the robot. Contains subsystems, OI devices, and commands. */
   public RobotContainer() {
+    IntakeIO intakeIO = new IntakeIO() {};
+
     switch (Constants.currentMode) {
       case REAL:
         // Real robot, instantiate hardware IO implementations
@@ -70,6 +77,7 @@ public class RobotContainer {
                 new ModuleIOSpark(1),
                 new ModuleIOSpark(2),
                 new ModuleIOSpark(3));
+        intakeIO = new IntakeIO() {}; // Placeholder for real intake
         break;
 
       case SIM:
@@ -89,6 +97,7 @@ public class RobotContainer {
                 new ModuleIOSim(driveSimulation.getModules()[1]),
                 new ModuleIOSim(driveSimulation.getModules()[2]),
                 new ModuleIOSim(driveSimulation.getModules()[3]));
+        intakeIO = new IntakeIOSim(driveSimulation);
         break;
 
       default:
@@ -102,6 +111,8 @@ public class RobotContainer {
                 new ModuleIO() {});
         break;
     }
+
+    intake = new Intake(intakeIO);
 
     // Set up auto routines
     autoChooser = new LoggedDashboardChooser<>("Auto Choices", AutoBuilder.buildAutoChooser());
@@ -169,6 +180,24 @@ public class RobotContainer {
 
     // Switch to X pattern when X button is pressed
     controller.x().onTrue(Commands.runOnce(drive::stopWithX, drive));
+
+    // Toggle intake on/off with left bumper, with controller rumble feedback
+    controller
+        .leftBumper()
+        .onTrue(
+            Commands.runOnce(
+                () -> {
+                  boolean nowRunning = intake.toggleIntake();
+                  Logger.recordOutput("Intake/ToggleState", nowRunning ? "ON" : "OFF");
+                  // Schedule rumble feedback in a separate command so it doesn't
+                  // require the intake subsystem for the wait/rumble sequence
+                  CommandScheduler.getInstance()
+                      .schedule(
+                          nowRunning
+                              ? ControllerUtils.rumble(controller.getHID(), 1, 0.5, 0.0)
+                              : ControllerUtils.rumble(controller.getHID(), 2, 0.2, 0.15));
+                },
+                intake));
 
     // Reset gyro / odometry
     final Runnable resetGyro =
@@ -242,6 +271,15 @@ public class RobotContainer {
     Logger.recordOutput(
         "FieldSimulation/RobotPose3d", new Pose3d(driveSimulation.getSimulatedDriveTrainPose()));
     Logger.recordOutput(
-        "FieldSimulation/Fuel", SimulatedArena.getInstance().getGamePiecesArrayByType("Fuel"));
+        "FieldSimulation/Fuel",
+        SimulatedArena.getInstance().getGamePiecesArrayByType(Constants.REBUILT_GAME_PIECE));
+  }
+
+  public void stopIntake() {
+    intake.stop();
+  }
+
+  public void startIntake() {
+    intake.runIntake();
   }
 }
