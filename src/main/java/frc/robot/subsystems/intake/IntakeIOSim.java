@@ -40,4 +40,14 @@ public class IntakeIOSim implements IntakeIO {
     else intakeSim.stopIntake(); // Retracts the intake into the chassis frame, disabling game piece
     // collection
   }
+
+  @Override
+  public boolean launchFuel() {
+    return intakeSim.obtainGamePieceFromIntake();
+  }
+
+  /** Returns the underlying IntakeSimulation for use by ShooterIOSim. */
+  public IntakeSimulation getIntakeSimulation() {
+    return intakeSim;
+  }
 }

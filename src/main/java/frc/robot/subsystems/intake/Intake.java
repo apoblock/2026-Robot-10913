@@ -37,4 +37,14 @@ public class Intake extends SubsystemBase {
   public Command stopCommand() {
     return this.runOnce(this::stop);
   }
+
+  /** Attempt to consume a game piece for launching. Returns true if successful. */
+  public boolean launchFuel() {
+    return io.launchFuel();
+  }
+
+  /** Returns true if there are game pieces in the intake. */
+  public boolean hasGamePieces() {
+    return inputs.gamePiecesCount > 0;
+  }
 }

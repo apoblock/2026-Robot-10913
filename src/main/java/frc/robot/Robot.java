@@ -102,6 +102,7 @@ public class Robot extends LoggedRobot {
   @Override
   public void disabledInit() {
     robotContainer.stopIntake();
+    robotContainer.stopShooting();
   }
 
   /** This function is called periodically when disabled. */
@@ -157,7 +158,8 @@ public class Robot extends LoggedRobot {
   /** This function is called once when the robot is first started up. */
   @Override
   public void simulationInit() {
-    // Obtains the default instance of the simulation world, which is a Rebuilt Arena.
+    // Obtains the default instance of the simulation world, which is a Rebuilt
+    // Arena.
     // SimulatedArena.getInstance();
     SimulatedArena.getInstance().resetFieldForAuto();
   }

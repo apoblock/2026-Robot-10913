@@ -36,6 +36,9 @@ import frc.robot.subsystems.drive.ModuleIOSpark;
 import frc.robot.subsystems.intake.Intake;
 import frc.robot.subsystems.intake.IntakeIO;
 import frc.robot.subsystems.intake.IntakeIOSim;
+import frc.robot.subsystems.shooter.Shooter;
+import frc.robot.subsystems.shooter.ShooterIO;
+import frc.robot.subsystems.shooter.ShooterIOSim;
 import frc.robot.subsystems.vision.ObjectDetectionIO;
 import frc.robot.subsystems.vision.ObjectDetectionIOSim;
 import frc.robot.subsystems.vision.Vision;
@@ -61,6 +64,7 @@ public class RobotContainer {
   private final Drive drive;
   private final Vision vision;
   private final Intake intake;
+  private final Shooter shooter;
   private SwerveDriveSimulation driveSimulation = null;
   private VisionSystemSim visionSim = null;
 
@@ -81,6 +85,7 @@ public class RobotContainer {
     VisionIO backTag = new VisionIO() {};
     ObjectDetectionIO frontML = new ObjectDetectionIO() {};
     IntakeIO intakeIO = new IntakeIO() {};
+    ShooterIO shooterIO = new ShooterIO() {};
 
     switch (Constants.currentMode) {
       case REAL:
@@ -141,7 +146,11 @@ public class RobotContainer {
                 VisionConstants.backTagCamName,
                 visionSim);
         frontML = new ObjectDetectionIOSim(VisionConstants.frontMLCamTransform);
-        intakeIO = new IntakeIOSim(driveSimulation);
+        IntakeIOSim intakeIOSim = new IntakeIOSim(driveSimulation);
+        intakeIO = intakeIOSim;
+        ShooterIOSim shooterIOSim =
+            new ShooterIOSim(driveSimulation, intakeIOSim.getIntakeSimulation());
+        shooterIO = shooterIOSim;
         break;
 
       default:
@@ -158,6 +167,7 @@ public class RobotContainer {
 
     vision = new Vision(frontTag, backTag, frontML, drive);
     intake = new Intake(intakeIO);
+    shooter = new Shooter(shooterIO);
 
     // Set up auto routines
     autoChooser = new LoggedDashboardChooser<>("Auto Choices", AutoBuilder.buildAutoChooser());
@@ -229,6 +239,9 @@ public class RobotContainer {
     // Intake controls
     controller.x().onTrue(Commands.runOnce(intake::runIntake, intake));
     controller.y().onTrue(Commands.runOnce(intake::stop, intake));
+
+    // Shooter controls - right bumper to shoot while held
+    controller.rightBumper().whileTrue(shooter.shootCommand());
 
     // Reset gyro / odometry
     final Runnable resetGyro =
@@ -319,5 +332,9 @@ public class RobotContainer {
 
   public void startIntake() {
     intake.runIntake();
+  }
+
+  public void stopShooting() {
+    shooter.stopShooting();
   }
 }

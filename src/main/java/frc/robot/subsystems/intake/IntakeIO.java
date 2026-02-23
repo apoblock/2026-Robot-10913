@@ -18,4 +18,9 @@ public interface IntakeIO {
   public default int getFuelCount() {
     return 0;
   }
+
+  /** Attempt to consume a game piece from the intake for launching. Returns true if successful. */
+  public default boolean launchFuel() {
+    return false;
+  }
 }
